@@ -1,0 +1,6 @@
+{
+  "name": "Contentful UI reference quick select",
+  "id": "cf-ref-quick-select",
+  "fieldTypes": ["Entry"],
+  "srcdoc": "./index.html"
+}

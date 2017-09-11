@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Contentful UI extension quick reference select</title>
+    <script src="https://contentful.github.io/ui-extensions-sdk/cf-extension-api.js"></script>
+  </head>
+  <body>
+    <ul id="entries"></ul>
+    <p id="status"></p>
+    <script>
+      // initialize ui extension
+      window.contentfulExtension.init( extension => {
+        // the entries are bound to the available validations
+        // for the given reference field
+        const allowedContentTypes = extension.field.validations.reduce(
+          (acc, val) => {
+            if ( val.linkContentType ) {
+              acc = acc.concat( val.linkContentType )
+            }
+
+            return acc;
+          }, [] );
+
+        // fetch entries for allowed content types
+        Promise.all(
+          allowedContentTypes.map(
+            type => extension.space.getEntries({ content_type: type }).then( resp => resp.items )
+          )
+        ).then( ([...args]) => {
+          // concat array of entries of different content types
+          // to one array to render the list
+          const items = args.reduce( (acc, items) => acc.concat(items), []);
+
+          // grab elements from the DOM to render the list in
+          const list = document.getElementById('entries');
+          const status = document.getElementById('status');
+
+          // get current field value
+          // and extract reference entry ID
+          let currentValue = extension.field.getValue();
+          let currentId = currentValue && currentValue.sys.id;
+
+          // render radio button list
+          list.innerHTML = items.map(item => `
+            <li><label>
+              <input name="entry" type="radio" value="${item.sys.id}" ${ item.sys.id === currentId ? 'checked' : '' }>
+              ${item.fields.name['en-US']} (${item.fields.title['en-US']})
+            </label>
+          `).join('');
+
+          // add event listeners to the radios
+          // and save value on change
+          [...document.querySelectorAll('input[type=radio]')].forEach( elem => {
+            elem.addEventListener('change', event => {
+              status.innerHTML = '';
+
+              // save new set value
+              extension.field.setValue({
+                sys: {
+                  id: event.target.value,
+                  linkType: "Entry",
+                  type: "Link"
+                }
+              })
+              .then(() => {
+                status.innerHTML = 'Saved';
+              })
+              .catch( error => {
+                status.innerHTML = 'Error: ' + JSON.strinigy(error);
+              });
+            });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
